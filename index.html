@@ -41,7 +41,7 @@
             rats = [];
             bats = [];
             bullets = [];
-            crops = [];
+            corpses = [];
             dumpTruck = [];
             Good = [];
             truckCountter = 0;
@@ -176,8 +176,8 @@
                         objectts[i1].width = 18;
                         objectts[i1].height = 18;
                         objectts[i1].x += 6;
-                        objectts[i1].image.src = "image/crop.png";
-                        crops.push(new component(47, 26, "image/dead.png", objectts[i1].x - 16, objectts[i1].y, "image"));
+                        objectts[i1].image.src = "image/corpse.png";
+                        corpses.push(new component(47, 26, "image/dead.png", objectts[i1].x - 16, objectts[i1].y, "image"));
                         bullets.splice(i2, 1);
                         score.plusone();
                     } else {
@@ -186,7 +186,7 @@
                 }
             }
             deadEnemy(objectts);
-            remove_cropss(crops);
+            remove_corpsess(corpses);
         }
 
         function deadEnemy(objectts) {
@@ -203,7 +203,7 @@
             }
         }
 
-        function remove_cropss(objectts) {
+        function remove_corpsess(objectts) {
             var i = 0;
             while (i < objectts.length) {
                 if (GameArea.frameNo - objectts[i].current_frameNo > 120) {
@@ -374,8 +374,8 @@
                 bullets[i].y += -3;
                 bullets[i].update();
             }
-            for (i = 0; i < crops.length; i += 1) {
-                crops[i].update();
+            for (i = 0; i < corpses.length; i += 1) {
+                corpses[i].update();
             }
             for (i = 0; i < dumpTruck.length; i += 1) {
                 if (dumpTruck[i].state == "normal" && Math.abs(XSK.x - dumpTruck[i].x) > 40) {
