@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        canvas {
+            image-rendering: optimizeSpeed;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: optimize-contrast;
+            image-rendering: pixelated;
+            -ms-interpolation-mode: nearest-neighbor;
+            border: 1px solid #d3d3d3;
+            background-color: #000000;
+        }
+    </style>
+
+</head>
+
+<body onload="startGame()">
+    <script>
+        
+        var XSK;
+        var GameArea;
+
+        var music = new sound("sound/chin cheng hanji.wav");
+
+        window.addEventListener('keydown', function (e) {
+            GameArea.keyup = false;
+            GameArea.keydown = true;
+            GameArea.keys = (GameArea.keys || []);
+            GameArea.keys[e.keyCode] = (e.type == "keydown");
+        })
+         window.addEventListener('keyup', function (e) {
+            GameArea.keyup = true;
+            GameArea.keys[e.keyCode] = (e.type == "keydown");
+        })
+
+        function startGame() {
+            rats = [];
+            bats = [];
+            bullets = [];
+            crops = [];
+            dumpTruck = [];
+            Good = [];
+            truckCountter = 0;
+            displayScore = [];
+            allow_bullets = 1;
+            XSK = new component(36, 42, "image/head.png", 118, 179, "image");
+            BackgroundShade = new component(256, 224, "image/background/bs1.png", 0, 0, "image");
+            Background = new component(256, 224, "image/background/b1.png", 0, 0, "image");
+            for (i = 0; i < 9; i += 1) {
+                displayScore.push(new component(16, 16, "image/0.png", 256 - 32 - i * 16, 8, "image"))
+            }
+            story = new component(256, 224, "image/story/0.png", 0, 0, "image")
+            score.start();
+            GameArea.start();
+        }
+
+        var GameArea = {
+            canvas: document.createElement("canvas"),
+            start: function () {
+                    this.canvas.width = 256;
+                    this.canvas.height = 224;
+                    this.context = this.canvas.getContext("2d");
+                    document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+                    this.frameNo = 0;
+                    this.score = 0;
+                    this.interval = setInterval(beforemain, 200);
+
+                },
+                main: function () {
+                    this.canvas.width = 256;
+                    this.canvas.height = 224;
+                    this.context = this.canvas.getContext("2d");
+                    document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+                    this.frameNo = 0;
+                    this.score = 0;
+                    this.interval = setInterval(updateGameArea, 20);
+                },
+                end: function () {
+                    this.canvas.width = 256;
+                    this.canvas.height = 224;
+                    this.context = this.canvas.getContext("2d");
+                    document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+                    this.frameNo = 0;
+                    this.score = 0;
+                    this.interval = setInterval(aftermain, 200);
+                },
+                clear: function () {
+                    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                },
+                stop: function () {
+                    clearInterval(this.interval);
+                }
+        };
+		
+        var score = {
+            start: function () {
+                    this.number = 0;
+                    this.base9 = [];
+                    this.index = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                },
+                plusone: function () {
+                    this.number += 5;
+                    this.base9 = (this.number).toString(9).toString();
+                    for (i = 0; i < this.base9.length; i += 1) {
+                        this.index[i] = parseInt((this.base9).charAt(this.base9.length - i - 1));
+                    }
+                }
+        };
+
+        function component(width, height, color, x, y, type) {
+            this.type = type;
+            if (type == "image") {
+                this.image = new Image();
+                this.image.src = color;
+            }
+            this.unhit = true;
+            this.alive = true;
+            this.current_frameNo = GameArea.frameNo;
+            this.direction = -1;
+            this.directionY = -1;
+            this.blinker = -1;
+            this.state = "normal";
+            this.width = width;
+            this.height = height;
+            this.speedX = 0;
+            this.speedY = 0;
+            this.x = x;
+            this.y = y;
+            this.update = function () {
+                ctx = GameArea.context;
+                if (type == "image") {
+                    ctx.drawImage(this.image,
+                        this.x,
+                        this.y,
+                        this.width, this.height);
+                } else {
+                    ctx.fillStyle = color;
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                }
+            };
+            this.newPos = function () {
+                if ((this.x >= 3 && this.speedX != 2) | (this.x <= 256 - 36 - 3 && this.speedX != -2)) {
+                    this.x += this.speedX;
+                }
+                if ((this.y >= 3 && this.speedY != 2) | (this.y <= 224 - 42 - 3 && this.speedY != -2)) {
+                    this.y += this.speedY;
+                }
+            };
+            this.crashWith = function (objectts, delay) {
+                var myleft = this.x;
+                var myright = this.x + (this.width);
+                var mytop = this.y;
+                var mybottom = this.y + (this.height);
+                var otherleft = objectts.x;
+                var otherright = objectts.x + (objectts.width);
+                var othertop = objectts.y;
+                var otherbottom = objectts.y + (objectts.height);
+                var crash = true;
+                if ((mybottom < othertop + delay) || (mytop > otherbottom - delay) || (myright < otherleft + delay) || (myleft > otherright - delay)) {
+                    crash = false;
+                }
+                return crash;
+            }
+        }
+
+        function hitEnemy(objectts) {
+            for (i1 = 0; i1 < objectts.length; i1 += 1) {
+                var i2 = 0;
+                while (i2 < bullets.length) {
+                    if (objectts[i1].crashWith(bullets[i2], 2) & objectts[i1].alive == true) {
+                        objectts[i1].unhit = false;
+                        objectts[i1].width = 18;
+                        objectts[i1].height = 18;
+                        objectts[i1].x += 6;
+                        objectts[i1].image.src = "image/crop.png";
+                        crops.push(new component(47, 26, "image/dead.png", objectts[i1].x - 16, objectts[i1].y, "image"));
+                        bullets.splice(i2, 1);
+                        score.plusone();
+                    } else {
+                        i2 += 1
+                    }
+                }
+            }
+            deadEnemy(objectts);
+            remove_cropss(crops);
+        }
+
+        function deadEnemy(objectts) {
+            var i = 0;
+            while (i < objectts.length) {
+                if (objectts[i].unhit == false & objectts[i].alive == true) {
+                    objectts[i].alive = false;
+                    if (Math.floor(Math.random() * 10) <= 5) {
+                        objectts.splice(i, 1);
+                    }
+                } else {
+                    i += 1
+                }
+            }
+        }
+
+        function remove_cropss(objectts) {
+            var i = 0;
+            while (i < objectts.length) {
+                if (GameArea.frameNo - objectts[i].current_frameNo > 120) {
+                    objectts.splice(i, 1);
+                } else {
+                    i += 1
+                }
+            }
+        }
+
+        function outrange(objectts) {
+            var i = 0;
+            while (i < objectts.length) {
+                if (objectts[i].y > 300 || objectts[i].y < -100 || objectts[i].x > 300 || objectts[i].x < -100) {
+                    objectts.splice(i, 1);
+                } else {
+                    i += 1
+                }
+            }
+        }
+
+        function beforemain() {
+            GameArea.clear();
+            setInterval(music.play(), 10);
+
+            if (GameArea.score == 6) {
+                GameArea.stop();
+                GameArea.main();
+            }
+            if (GameArea.keydown == true && GameArea.keyup == true) {
+                GameArea.keydown = false;
+                GameArea.score += 1;
+                story.image.src = "image/story/" + (GameArea.score).toString() + ".png";
+            }
+            story.update();
+        }
+
+        function aftermain() {
+            GameArea.clear();
+            setInterval(music.play(), 10);
+            if (GameArea.score + 1 >= 2) {
+                GameArea.stop();
+                startGame();
+            }
+            if (GameArea.keydown == true && GameArea.keyup == true) {
+                GameArea.keydown = false;
+                GameArea.score += 1;
+            }
+            story.image.src = "image/story/R.png";
+            story.update();
+        }
+
+        function updateGameArea() {
+            var height, gap, minHeight, maxHeight, minGap, maxGap;
+
+            for (i = 0; i < bats.length; i += 1) {
+                if (XSK.crashWith(bats[i], 5)) {
+                    GameArea.keydown = false;
+                    GameArea.stop();
+                    GameArea.end();
+                }
+            }
+            for (i = 0; i < rats.length; i += 1) {
+                if (XSK.crashWith(rats[i], 5)) {
+                    GameArea.keydown = false;
+                    GameArea.stop();
+                    GameArea.end();
+                }
+            }
+            for (i = 0; i < dumpTruck.length; i += 1) {
+                if (XSK.crashWith(dumpTruck[i], 5)) {
+                    GameArea.keydown = false;
+                    GameArea.stop();
+                    GameArea.end();
+                }
+            }
+            for (i = 0; i < Good.length; i += 1) {
+                if (XSK.crashWith(Good[i], 5)) {
+                    GameArea.keydown = false;
+                    GameArea.stop();
+                    GameArea.end();
+                }
+            }
+
+            hitEnemy(rats);
+            hitEnemy(bats);
+
+            if ((score.number).toString(9) > 1200) {
+                music.stop();
+            } else {
+                music.play();
+            }
+
+            GameArea.clear();
+            outrange(rats);
+            outrange(bats);
+            outrange(bullets);
+            
+            Background.update();
+            BackgroundShade.update();
+            for (i = 0; i < 9; i += 1) {
+
+                displayScore[i].image.src = "image/" + (score.index[i]).toString() + ".png";
+                displayScore[i].update();
+            };
+            XSK.speedX = 0;
+            XSK.speedY = 0;
+            if (GameArea.keys && GameArea.keys[65]) {
+                XSK.speedX = -2;
+            }
+            if (GameArea.keys && GameArea.keys[68]) {
+                XSK.speedX = 2;
+            }
+            if (GameArea.keys && GameArea.keys[87]) {
+                XSK.speedY = -2;
+            }
+            if (GameArea.keys && GameArea.keys[83]) {
+                XSK.speedY = 2;
+            }
+
+            if ((GameArea.keys && GameArea.keys[13]) && allow_bullets == 1) {
+                bullets.push(new component(5, 8, "image/bullet.png", XSK.x + 14, XSK.y, "image"));
+                allow_bullets = 0;
+            }
+            if ((GameArea.frameNo / 20) % 1 == 0) {
+                allow_bullets = 1;
+            }
+
+            if (everyinterval(5) && (XSK.speedY != 0 | XSK.speedX != 0)) {
+                XSK.image.src = "image/head.png";
+                XSK.blinker = -XSK.blinker
+            } else if (everyinterval(10) | XSK.blinker == 1) {
+                XSK.image.src = "image/head2.png";
+            }
+            GameArea.frameNo += 1;
+
+            if ((GameArea.frameNo == 1 || everyinterval(30)) && Good.length == 0) {
+                if (Math.floor(Math.random() * 10) <= 7) {
+                    rats.push(new component(32, 31, "image/rat.png", 10 + Math.ceil(Math.random() * 204), -20, "image"));
+                } else {
+                    bats.push(new component(32, 26, "image/bat.png", 10 + Math.ceil(Math.random() * 204), -20, "image"));
+                }
+            }
+
+            if (everyinterval(400) && Good.length == 0) {
+                dumpTruck.push(new component(92, 32, "image/truck.png", 240, 35 + Math.ceil(Math.random() * 160), "image"));
+                truckCountter += 1;
+            }
+            if (everyinterval(700) && Good.length == 0 && truckCountter >= 3) {
+                Good.push(new component(76, 92, "image/boss.png", 128, 30, "image"));
+                truckCountter == 0;
+            }
+            for (i = 0; i < rats.length; i += 1) {
+                rats[i].y += 2;
+                rats[i].update();
+            }
+            for (i = 0; i < bats.length; i += 1) {
+                if (everyinterval(30) & bats[i].alive == true) {
+                    bats[i].direction = -bats[i].direction;
+                } else if (bats[i].alive == false) {
+                    bats[i].direction = 0;
+                }
+                bats[i].y += 2;
+                bats[i].x += bats[i].direction;
+                bats[i].update();
+            }
+            for (i = 0; i < bullets.length; i += 1) {
+                bullets[i].y += -3;
+                bullets[i].update();
+            }
+            for (i = 0; i < crops.length; i += 1) {
+                crops[i].update();
+            }
+            for (i = 0; i < dumpTruck.length; i += 1) {
+                if (dumpTruck[i].state == "normal" && Math.abs(XSK.x - dumpTruck[i].x) > 40) {
+                    dumpTruck[i].x += -2;
+                } else {
+                    dumpTruck[i].state = "accelertated";
+                    dumpTruck[i].x += -4;
+                }
+                dumpTruck[i].update();
+            }
+            for (i = 0; i < Good.length; i += 1) {
+                BackgroundShade.image.src = "image/background/bs2.png";
+                if (Good[i].state == "normal") {
+                    if (everyinterval(30)) {
+                        Good[i].directionY = -Good[i].directionY;
+                    }
+                    Good[i].x += Good[i].direction;
+                    Good[i].y += Good[i].directionY;
+                    if (Good[i].y == 30 && GameArea.frameNo - Good[i].current_frameNo > 60 && Math.abs(XSK.x - Good[i].x) < 50) {
+                        Good[i].state = "down";
+                        Good[i].current_frameNo = GameArea.frameNo;
+                    } else if (Good[i].x >= 174 || Good[i].x <= 10) {
+                        Good[i].direction = -Good[i].direction;
+                    }
+                } else if (Good[i].state == "down") {
+                    Good[i].y += 6;
+                    if (GameArea.frameNo - Good[i].current_frameNo > 15) {
+                        Good[i].state = "stop";
+                        Good[i].current_frameNo = GameArea.frameNo;
+                    }
+                } else if (Good[i].state == "stop") {
+                    if (GameArea.frameNo - Good[i].current_frameNo > 45) {
+                        Good[i].state = "up";
+                        Good[i].current_frameNo = GameArea.frameNo;
+                    }
+                } else if (Good[i].state == "up") {
+                    Good[i].y += -6;
+                    if (GameArea.frameNo - Good[i].current_frameNo > 15) {
+                        Good[i].state = "normal";
+                        Good[i].current_frameNo = GameArea.frameNo;
+                    }
+                }
+                Good[i].update();
+            }
+			XSK.newPos();
+            XSK.update();
+            
+        }
+
+        function sound(src) {
+            this.sound = document.createElement("audio");
+            this.sound.src = src;
+            this.sound.setAttribute("preload", "auto");
+            this.sound.setAttribute("controls", "none");
+            this.sound.style.display = "none";
+            document.body.appendChild(this.sound);
+            this.play = function () {
+                this.sound.play();
+            };
+            this.stop = function () {
+                this.sound.pause();
+            }
+        }
+
+        function everyinterval(n) {
+            if ((GameArea.frameNo / n) % 1 == 0) {
+                return true;
+            }
+            return false;
+        }
+    </script>
+
+</body>
+
+
+</html>
