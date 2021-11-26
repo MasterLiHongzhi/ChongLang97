@@ -20,7 +20,6 @@
 
 <body onload="startGame()">
     <script>
-        
         var XSK;
         var GameArea;
 
@@ -31,6 +30,16 @@
             GameArea.keydown = true;
             GameArea.keys = (GameArea.keys || []);
             GameArea.keys[e.keyCode] = (e.type == "keydown");
+            if (GameArea.keys[49]) {
+                music.stop();
+                music = new sound("sound/chin cheng hanji.wav");
+                music.play()
+            } else if (GameArea.keys[50]) {
+                music.stop();
+                music = new sound("sound/The Red Sun in the Sky.wav");
+                music.play()
+            }
+
         })
          window.addEventListener('keyup', function (e) {
             GameArea.keyup = true;
@@ -95,7 +104,7 @@
                     clearInterval(this.interval);
                 }
         };
-		
+
         var score = {
             start: function () {
                     this.number = 0;
@@ -301,7 +310,7 @@
             outrange(rats);
             outrange(bats);
             outrange(bullets);
-            
+
             Background.update();
             BackgroundShade.update();
             for (i = 0; i < 9; i += 1) {
@@ -420,9 +429,9 @@
                 }
                 Good[i].update();
             }
-			XSK.newPos();
+            XSK.newPos();
             XSK.update();
-            
+
         }
 
         function sound(src) {
